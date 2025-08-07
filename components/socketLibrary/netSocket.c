@@ -225,6 +225,7 @@ le_result_t netSocket_Connect
     struct sockaddr_storage srcSocket = {0};
     int fd = -1;
     le_result_t result = LE_FAULT;
+    int optVal = 1;
 
     if ((!hostPtr) || (!fdPtr))
     {
@@ -310,6 +311,21 @@ le_result_t netSocket_Connect
             continue;
         }
 
+        // Set SO_REUSEADDR Opt for socket
+        // - Allows a socket to bind to an address/port even if it's in the
+        //   TIME_WAIT state (common after a connection closes).
+        // - Useful for server applications to restart quickly without
+        //   waiting for the OS to release the port.
+        // - Prevents "Address already in use" errors.
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal)) < 0)
+        {
+            LE_ERROR("Failed to set Opt(SO_REUSEADDR) - %s", strerror(errno));
+            close(fd);
+            continue;
+        }
+
+        LE_INFO("setsockopt SO_REUSEADDR = %d", optVal);
+
         // Bind socket. Note that we MUST bind the socket to the address of the
         // PDP interface in order for data to be routed correctly.
         if (bind(fd, (struct sockaddr*)&srcSocket, sizeof(srcSocket)) == -1)
@@ -365,6 +381,7 @@ le_result_t netSocket_Listen
     struct addrinfo serverInfo;
     struct sockaddr_storage srcSocket = {0};
     int fd = -1;
+    int optVal = 1;
 
     if ((!srcAddrPtr) || (!fdPtr))
     {
@@ -400,6 +417,21 @@ le_result_t netSocket_Listen
         LE_ERROR("Unable to create a socket");
         return LE_COMM_ERROR;
     }
+
+    // Set SO_REUSEADDR Opt for socket
+    // - Allows a socket to bind to an address/port even if it's in the
+    //   TIME_WAIT state (common after a connection closes).
+    // - Useful for server applications to restart quickly without
+    //   waiting for the OS to release the port.
+    // - Prevents "Address already in use" errors.
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal)) < 0)
+    {
+        LE_ERROR("Failed to set Opt(SO_REUSEADDR) - %s", strerror(errno));
+        close(fd);
+        return LE_COMM_ERROR;
+    }
+
+    LE_INFO("setsockopt SO_REUSEADDR = %d", optVal);
 
     // Bind socket to source address
     if(-1 == bind(fd, (struct sockaddr*)&srcSocket, sizeof(struct sockaddr_storage)))
