@@ -276,6 +276,18 @@ config MEM_POOLS
   track the allocations and de-allocations at the cost of potential memory
   fragmentation.
 
+config AVCFS_WRITE_IF_CHANGED
+  bool "Skip le_fs writes when content is unchanged"
+  default y
+  ---help---
+  Enable a read-before-write optimization for file-system writes that opt in to
+  it (currently the AVC WriteFs() helper).  When enabled, an opted-in writer
+  reads the existing file content and skips the write entirely if the data to be
+  written is byte-for-byte identical (including identical size).  This reduces
+  flash wear for files that are written repeatedly but rarely change value, at
+  the cost of one extra read per write.  When disabled, those writers always
+  write.  This option has no effect on le_fs_Write() itself.
+
 config ENABLE_LE_JSON_API
   bool "Include le_json APIs"
   default y
